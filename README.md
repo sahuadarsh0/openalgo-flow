@@ -45,22 +45,38 @@ chmod +x setup.sh start.sh
 ./start.sh
 ```
 
-## Manual Setup
+## Running Separately
 
-### Backend (with uv)
+### Backend
 
 ```bash
 cd backend
-uv sync
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
-npm install
 npm run dev
+```
+
+Open http://localhost:5173 in your browser.
+
+## First Time Setup
+
+### Backend Setup
+
+```bash
+cd backend
+uv sync
+```
+
+### Frontend Setup
+
+```bash
+cd frontend
+npm install
 ```
 
 ## Configuration
