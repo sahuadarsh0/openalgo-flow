@@ -199,14 +199,23 @@ Use variables to pass data between nodes:
 
 ## Supported Underlying Symbols
 
-| Symbol | Exchange | Lot Size |
-|--------|----------|----------|
-| NIFTY | NFO | 75 |
-| BANKNIFTY | NFO | 30 |
-| FINNIFTY | NFO | 65 |
-| MIDCPNIFTY | NFO | 120 |
-| SENSEX | BFO | 20 |
-| BANKEX | BFO | 30 |
+### NSE Index Symbols (F&O Exchange: NFO)
+
+| Symbol | Lot Size |
+|--------|----------|
+| NIFTY | 75 |
+| BANKNIFTY | 30 |
+| FINNIFTY | 65 |
+| MIDCPNIFTY | 120 |
+| NIFTYNXT50 | 25 |
+
+### BSE Index Symbols (F&O Exchange: BFO)
+
+| Symbol | Lot Size |
+|--------|----------|
+| SENSEX | 20 |
+| BANKEX | 30 |
+| SENSEX50 | 25 |
 
 ## Order Types
 

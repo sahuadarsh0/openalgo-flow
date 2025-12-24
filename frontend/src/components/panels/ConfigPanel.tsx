@@ -73,13 +73,19 @@ const LOG_LEVELS = [
 ]
 
 // Options Trading Constants
+// NSE Index Symbols (F&O Exchange: NFO)
+// BSE Index Symbols (F&O Exchange: BFO)
 const INDEX_SYMBOLS = [
-  { value: 'NIFTY', label: 'NIFTY 50', lotSize: 75 },
-  { value: 'BANKNIFTY', label: 'Bank NIFTY', lotSize: 30 },
-  { value: 'FINNIFTY', label: 'Fin NIFTY', lotSize: 40 },
-  { value: 'MIDCPNIFTY', label: 'Midcap NIFTY', lotSize: 75 },
-  { value: 'SENSEX', label: 'SENSEX', lotSize: 20 },
-  { value: 'BANKEX', label: 'BANKEX', lotSize: 30 },
+  // NSE Indices
+  { value: 'NIFTY', label: 'NIFTY', exchange: 'NFO', lotSize: 75 },
+  { value: 'BANKNIFTY', label: 'BANKNIFTY', exchange: 'NFO', lotSize: 30 },
+  { value: 'FINNIFTY', label: 'FINNIFTY', exchange: 'NFO', lotSize: 65 },
+  { value: 'MIDCPNIFTY', label: 'MIDCPNIFTY', exchange: 'NFO', lotSize: 120 },
+  { value: 'NIFTYNXT50', label: 'NIFTYNXT50', exchange: 'NFO', lotSize: 25 },
+  // BSE Indices
+  { value: 'SENSEX', label: 'SENSEX', exchange: 'BFO', lotSize: 20 },
+  { value: 'BANKEX', label: 'BANKEX', exchange: 'BFO', lotSize: 30 },
+  { value: 'SENSEX50', label: 'SENSEX50', exchange: 'BFO', lotSize: 25 },
 ]
 
 const OPTION_TYPES = [
@@ -602,7 +608,7 @@ export function ConfigPanel() {
                     const symbol = INDEX_SYMBOLS.find(s => s.value === v)
                     if (symbol) {
                       handleDataChange('quantity', symbol.lotSize)
-                      handleDataChange('exchange', v === 'SENSEX' || v === 'BANKEX' ? 'BFO' : 'NFO')
+                      handleDataChange('exchange', symbol.exchange)
                     }
                   }}
                 >
@@ -612,7 +618,7 @@ export function ConfigPanel() {
                   <SelectContent>
                     {INDEX_SYMBOLS.map((sym) => (
                       <SelectItem key={sym.value} value={sym.value}>
-                        {sym.label} (Lot: {sym.lotSize})
+                        {sym.label} ({sym.exchange}, Lot: {sym.lotSize})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -796,7 +802,7 @@ export function ConfigPanel() {
                     handleDataChange('underlying', v)
                     const symbol = INDEX_SYMBOLS.find(s => s.value === v)
                     if (symbol) {
-                      handleDataChange('exchange', v === 'SENSEX' || v === 'BANKEX' ? 'BFO' : 'NFO')
+                      handleDataChange('exchange', symbol.exchange)
                     }
                   }}
                 >
@@ -806,7 +812,7 @@ export function ConfigPanel() {
                   <SelectContent>
                     {INDEX_SYMBOLS.map((sym) => (
                       <SelectItem key={sym.value} value={sym.value}>
-                        {sym.label} (Lot: {sym.lotSize})
+                        {sym.label} ({sym.exchange}, Lot: {sym.lotSize})
                       </SelectItem>
                     ))}
                   </SelectContent>
