@@ -232,9 +232,11 @@ class NodeExecutor:
         action = node_data.get("action", "SELL")
         quantity = int(node_data.get("quantity", 1))
         expiry_type = node_data.get("expiryType", "current_week")
+        product = node_data.get("product", "NRML")
+        price_type = node_data.get("priceType", "MARKET")
 
         self.log(
-            f"Placing multi-leg options order: {underlying} strategy={strategy} action={action}"
+            f"Placing multi-leg options order: {underlying} strategy={strategy} action={action} product={product}"
         )
 
         # Get the underlying exchange for index
@@ -273,6 +275,8 @@ class NodeExecutor:
             exchange=underlying_exchange,
             legs=legs,
             expiry_date=expiry_date,
+            product=product,
+            price_type=price_type,
         )
         self.log(
             f"Multi-leg order result: {result}",

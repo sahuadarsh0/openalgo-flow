@@ -106,6 +106,8 @@ class OpenAlgoClient:
         exchange: str,
         legs: List[Dict[str, Any]],
         expiry_date: Optional[str] = None,
+        product: str = "NRML",
+        price_type: str = "MARKET",
         strategy: str = "OpenAlgoFlow"
     ) -> dict:
         """Place multi-leg options order using SDK"""
@@ -113,7 +115,9 @@ class OpenAlgoClient:
             "strategy": strategy,
             "underlying": underlying,
             "exchange": exchange,
-            "legs": legs
+            "legs": legs,
+            "product": product,
+            "pricetype": price_type
         }
         if expiry_date:
             kwargs["expiry_date"] = expiry_date
