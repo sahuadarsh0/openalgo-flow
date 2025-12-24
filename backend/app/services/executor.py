@@ -174,17 +174,46 @@ class NodeExecutor:
 
     def execute_options_order(self, node_data: dict) -> dict:
         """Execute Options Order node"""
+        underlying = node_data.get("underlying", "NIFTY")
+        expiry_type = node_data.get("expiryType", "current_week")
+        quantity = int(node_data.get("quantity", 1))
+
         self.log(
-            f"Placing options order: {node_data.get('underlying')} {node_data.get('optionType')} {node_data.get('offset')}"
+            f"Placing options order: {underlying} {node_data.get('optionType')} {node_data.get('offset')}"
         )
+
+        # Get the underlying exchange for index
+        if underlying in ["SENSEX", "BANKEX", "SENSEX50"]:
+            underlying_exchange = "BSE_INDEX"
+            fo_exchange = "BFO"
+        else:
+            underlying_exchange = "NSE_INDEX"
+            fo_exchange = "NFO"
+
+        # Get lot size
+        lot_sizes = {
+            "NIFTY": 75, "BANKNIFTY": 30, "FINNIFTY": 65,
+            "MIDCPNIFTY": 120, "NIFTYNXT50": 25,
+            "SENSEX": 20, "BANKEX": 30, "SENSEX50": 25
+        }
+        lot_size = lot_sizes.get(underlying, 75)
+        total_quantity = quantity * lot_size
+
+        # Resolve expiry date from expiry type
+        expiry_date = self._resolve_expiry_date(underlying, fo_exchange, expiry_type)
+        if not expiry_date:
+            return {"status": "error", "message": f"Could not resolve expiry for {expiry_type}"}
+
+        self.log(f"Resolved expiry: {expiry_type} -> {expiry_date}")
+
         result = self.client.options_order(
-            underlying=node_data.get("underlying", ""),
-            exchange=node_data.get("exchange", "NSE_INDEX"),
-            expiry_date=node_data.get("expiryDate", ""),
+            underlying=underlying,
+            exchange=underlying_exchange,
+            expiry_date=expiry_date,
             offset=node_data.get("offset", "ATM"),
             option_type=node_data.get("optionType", "CE"),
             action=node_data.get("action", "BUY"),
-            quantity=int(node_data.get("quantity", 1)),
+            quantity=total_quantity,
             price_type=node_data.get("priceType", "MARKET"),
             product=node_data.get("product", "NRML"),
             splitsize=int(node_data.get("splitSize", 0)),
@@ -198,15 +227,50 @@ class NodeExecutor:
 
     def execute_options_multi_order(self, node_data: dict) -> dict:
         """Execute Multi-Leg Options Order node"""
+        underlying = node_data.get("underlying", "NIFTY")
+        strategy = node_data.get("strategy", "straddle")
+        action = node_data.get("action", "SELL")
+        quantity = int(node_data.get("quantity", 1))
+        expiry_type = node_data.get("expiryType", "current_week")
+
         self.log(
-            f"Placing multi-leg options order: {node_data.get('underlying')} strategy={node_data.get('strategyType')}"
+            f"Placing multi-leg options order: {underlying} strategy={strategy} action={action}"
         )
-        legs = node_data.get("legs", [])
-        expiry_date = node_data.get("expiryDate")
+
+        # Get the underlying exchange for index
+        underlying_exchange = "NSE_INDEX"
+        if underlying in ["SENSEX", "BANKEX", "SENSEX50"]:
+            underlying_exchange = "BSE_INDEX"
+            fo_exchange = "BFO"
+        else:
+            fo_exchange = "NFO"
+
+        # Get lot size
+        lot_sizes = {
+            "NIFTY": 75, "BANKNIFTY": 30, "FINNIFTY": 65,
+            "MIDCPNIFTY": 120, "NIFTYNXT50": 25,
+            "SENSEX": 20, "BANKEX": 30, "SENSEX50": 25
+        }
+        lot_size = lot_sizes.get(underlying, 75)
+        total_quantity = quantity * lot_size
+
+        # Resolve expiry date from expiry type
+        expiry_date = self._resolve_expiry_date(underlying, fo_exchange, expiry_type)
+        if not expiry_date:
+            return {"status": "error", "message": f"Could not resolve expiry for {expiry_type}"}
+
+        self.log(f"Resolved expiry: {expiry_type} -> {expiry_date}")
+
+        # Build legs based on strategy
+        legs = self._build_strategy_legs(strategy, action, total_quantity)
+        if not legs:
+            return {"status": "error", "message": f"Unknown strategy: {strategy}"}
+
+        self.log(f"Strategy legs: {legs}")
 
         result = self.client.options_multi_order(
-            underlying=node_data.get("underlying", ""),
-            exchange=node_data.get("exchange", "NSE_INDEX"),
+            underlying=underlying,
+            exchange=underlying_exchange,
             legs=legs,
             expiry_date=expiry_date,
         )
@@ -216,6 +280,161 @@ class NodeExecutor:
         )
         self.store_output(node_data, result)
         return result
+
+    def _resolve_expiry_date(self, symbol: str, exchange: str, expiry_type: str) -> Optional[str]:
+        """Resolve expiry type to actual expiry date"""
+        try:
+            response = self.client.get_expiry(symbol=symbol, exchange=exchange, instrumenttype="options")
+            if response.get("status") != "success":
+                self.log(f"Failed to fetch expiry: {response}", "error")
+                return None
+
+            expiry_list = response.get("data", [])
+            if not expiry_list:
+                return None
+
+            # Parse and sort expiry dates
+            def parse_expiry(exp_str: str) -> datetime:
+                # Format: "10-JUL-25" or "25DEC25"
+                for fmt in ["%d-%b-%y", "%d%b%y"]:
+                    try:
+                        return datetime.strptime(exp_str.upper(), fmt)
+                    except ValueError:
+                        continue
+                return datetime.max
+
+            sorted_expiries = sorted(expiry_list, key=parse_expiry)
+            now = datetime.now()
+            current_month = now.month
+            current_year = now.year
+
+            # Calculate next month
+            if current_month == 12:
+                next_month, next_year = 1, current_year + 1
+            else:
+                next_month, next_year = current_month + 1, current_year
+
+            if expiry_type == "current_week":
+                # Nearest expiry
+                return self._format_expiry_for_api(sorted_expiries[0]) if sorted_expiries else None
+
+            elif expiry_type == "next_week":
+                # Second nearest expiry
+                return self._format_expiry_for_api(sorted_expiries[1]) if len(sorted_expiries) > 1 else None
+
+            elif expiry_type == "current_month":
+                # Last expiry of current calendar month
+                result = None
+                for exp_str in sorted_expiries:
+                    exp_date = parse_expiry(exp_str)
+                    if exp_date.month == current_month and exp_date.year == current_year:
+                        result = exp_str  # Keep updating to get the last one
+                return self._format_expiry_for_api(result) if result else None
+
+            elif expiry_type == "next_month":
+                # Last expiry of next calendar month
+                result = None
+                for exp_str in sorted_expiries:
+                    exp_date = parse_expiry(exp_str)
+                    if exp_date.month == next_month and exp_date.year == next_year:
+                        result = exp_str
+                return self._format_expiry_for_api(result) if result else None
+
+            return None
+        except Exception as e:
+            self.log(f"Error resolving expiry: {e}", "error")
+            return None
+
+    def _format_expiry_for_api(self, expiry_str: str) -> str:
+        """Format expiry date for API (e.g., '10-JUL-25' -> '10JUL25')"""
+        if not expiry_str:
+            return ""
+        # Remove dashes and uppercase
+        return expiry_str.replace("-", "").upper()
+
+    def _build_strategy_legs(self, strategy: str, action: str, quantity: int) -> List[Dict[str, Any]]:
+        """Build legs array based on strategy type"""
+        # For short strategies (SELL), we sell. For long (BUY), we buy.
+        buy_action = "BUY"
+        sell_action = "SELL"
+
+        if strategy == "straddle":
+            # ATM CE + ATM PE (same action)
+            return [
+                {"offset": "ATM", "option_type": "CE", "action": action, "quantity": quantity},
+                {"offset": "ATM", "option_type": "PE", "action": action, "quantity": quantity},
+            ]
+
+        elif strategy == "strangle":
+            # OTM CE + OTM PE (same action)
+            return [
+                {"offset": "OTM2", "option_type": "CE", "action": action, "quantity": quantity},
+                {"offset": "OTM2", "option_type": "PE", "action": action, "quantity": quantity},
+            ]
+
+        elif strategy == "iron_condor":
+            # Sell OTM CE + Sell OTM PE + Buy further OTM CE + Buy further OTM PE
+            if action == "SELL":
+                return [
+                    {"offset": "OTM4", "option_type": "CE", "action": sell_action, "quantity": quantity},
+                    {"offset": "OTM4", "option_type": "PE", "action": sell_action, "quantity": quantity},
+                    {"offset": "OTM6", "option_type": "CE", "action": buy_action, "quantity": quantity},
+                    {"offset": "OTM6", "option_type": "PE", "action": buy_action, "quantity": quantity},
+                ]
+            else:
+                return [
+                    {"offset": "OTM4", "option_type": "CE", "action": buy_action, "quantity": quantity},
+                    {"offset": "OTM4", "option_type": "PE", "action": buy_action, "quantity": quantity},
+                    {"offset": "OTM6", "option_type": "CE", "action": sell_action, "quantity": quantity},
+                    {"offset": "OTM6", "option_type": "PE", "action": sell_action, "quantity": quantity},
+                ]
+
+        elif strategy == "iron_butterfly":
+            # Sell ATM CE + Sell ATM PE + Buy OTM CE + Buy OTM PE
+            if action == "SELL":
+                return [
+                    {"offset": "ATM", "option_type": "CE", "action": sell_action, "quantity": quantity},
+                    {"offset": "ATM", "option_type": "PE", "action": sell_action, "quantity": quantity},
+                    {"offset": "OTM3", "option_type": "CE", "action": buy_action, "quantity": quantity},
+                    {"offset": "OTM3", "option_type": "PE", "action": buy_action, "quantity": quantity},
+                ]
+            else:
+                return [
+                    {"offset": "ATM", "option_type": "CE", "action": buy_action, "quantity": quantity},
+                    {"offset": "ATM", "option_type": "PE", "action": buy_action, "quantity": quantity},
+                    {"offset": "OTM3", "option_type": "CE", "action": sell_action, "quantity": quantity},
+                    {"offset": "OTM3", "option_type": "PE", "action": sell_action, "quantity": quantity},
+                ]
+
+        elif strategy == "bull_call_spread":
+            # Buy lower strike CE + Sell higher strike CE
+            return [
+                {"offset": "ATM", "option_type": "CE", "action": buy_action, "quantity": quantity},
+                {"offset": "OTM2", "option_type": "CE", "action": sell_action, "quantity": quantity},
+            ]
+
+        elif strategy == "bear_put_spread":
+            # Buy higher strike PE + Sell lower strike PE
+            return [
+                {"offset": "ATM", "option_type": "PE", "action": buy_action, "quantity": quantity},
+                {"offset": "OTM2", "option_type": "PE", "action": sell_action, "quantity": quantity},
+            ]
+
+        elif strategy == "bull_put_spread":
+            # Sell higher strike PE + Buy lower strike PE
+            return [
+                {"offset": "ATM", "option_type": "PE", "action": sell_action, "quantity": quantity},
+                {"offset": "OTM2", "option_type": "PE", "action": buy_action, "quantity": quantity},
+            ]
+
+        elif strategy == "bear_call_spread":
+            # Sell lower strike CE + Buy higher strike CE
+            return [
+                {"offset": "ATM", "option_type": "CE", "action": sell_action, "quantity": quantity},
+                {"offset": "OTM2", "option_type": "CE", "action": buy_action, "quantity": quantity},
+            ]
+
+        return []
 
     def execute_basket_order(self, node_data: dict) -> dict:
         """Execute Basket Order node"""
