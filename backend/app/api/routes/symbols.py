@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+
 from app.core.database import get_db
 from app.core.openalgo import OpenAlgoClient
+from app.core.auth import get_current_admin
+from app.core.rate_limit import limiter, READ_LIMIT
 from app.models.settings import AppSettings
 
 router = APIRouter(prefix="/symbols", tags=["symbols"])
@@ -22,10 +25,13 @@ async def get_openalgo_client(db: AsyncSession = Depends(get_db)) -> OpenAlgoCli
 
 
 @router.get("/search")
+@limiter.limit(READ_LIMIT)
 async def search_symbols(
+    request: Request,
     query: str = Query(..., min_length=1),
     exchange: str = Query(default="NSE"),
-    client: OpenAlgoClient = Depends(get_openalgo_client)
+    client: OpenAlgoClient = Depends(get_openalgo_client),
+    _: bool = Depends(get_current_admin)
 ):
     """Search for symbols"""
     result = await client.search_symbols(query, exchange)
@@ -33,10 +39,13 @@ async def search_symbols(
 
 
 @router.get("/quotes")
+@limiter.limit(READ_LIMIT)
 async def get_quotes(
+    request: Request,
     symbol: str = Query(...),
     exchange: str = Query(default="NSE"),
-    client: OpenAlgoClient = Depends(get_openalgo_client)
+    client: OpenAlgoClient = Depends(get_openalgo_client),
+    _: bool = Depends(get_current_admin)
 ):
     """Get quotes for a symbol"""
     result = await client.get_quotes(symbol, exchange)

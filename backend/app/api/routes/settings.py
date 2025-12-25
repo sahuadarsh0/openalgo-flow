@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+
 from app.core.database import get_db
 from app.core.openalgo import OpenAlgoClient
+from app.core.auth import get_current_admin
+from app.core.rate_limit import limiter, API_LIMIT
 from app.models.settings import AppSettings
 from app.schemas.settings import (
     SettingsUpdate,
@@ -25,7 +28,12 @@ async def get_or_create_settings(db: AsyncSession) -> AppSettings:
 
 
 @router.get("", response_model=SettingsPublic)
-async def get_settings(db: AsyncSession = Depends(get_db)):
+@limiter.limit(API_LIMIT)
+async def get_settings(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
+):
     """Get current settings (without exposing API key)"""
     settings = await get_or_create_settings(db)
     return SettingsPublic(
@@ -37,9 +45,12 @@ async def get_settings(db: AsyncSession = Depends(get_db)):
 
 
 @router.put("")
+@limiter.limit(API_LIMIT)
 async def update_settings(
+    request: Request,
     settings_update: SettingsUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
 ):
     """Update settings"""
     settings = await get_or_create_settings(db)
@@ -61,7 +72,12 @@ async def update_settings(
 
 
 @router.post("/test", response_model=ConnectionTestResponse)
-async def test_connection(db: AsyncSession = Depends(get_db)):
+@limiter.limit(API_LIMIT)
+async def test_connection(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
+):
     """Test OpenAlgo connection"""
     settings = await get_or_create_settings(db)
 

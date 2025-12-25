@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
@@ -6,6 +6,8 @@ from typing import List
 from datetime import datetime
 
 from app.core.database import get_db
+from app.core.auth import get_current_admin
+from app.core.rate_limit import limiter, API_LIMIT, EXECUTE_LIMIT, READ_LIMIT
 from app.models.workflow import Workflow, WorkflowExecution
 from app.schemas.workflow import (
     WorkflowCreate,
@@ -19,7 +21,12 @@ router = APIRouter(prefix="/workflows", tags=["workflows"])
 
 
 @router.get("", response_model=List[WorkflowListItem])
-async def list_workflows(db: AsyncSession = Depends(get_db)):
+@limiter.limit(READ_LIMIT)
+async def list_workflows(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
+):
     """List all workflows"""
     result = await db.execute(
         select(Workflow).order_by(desc(Workflow.updated_at))
@@ -51,9 +58,12 @@ async def list_workflows(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=WorkflowResponse)
+@limiter.limit(API_LIMIT)
 async def create_workflow(
+    request: Request,
     workflow: WorkflowCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
 ):
     """Create a new workflow"""
     db_workflow = Workflow(
@@ -69,9 +79,12 @@ async def create_workflow(
 
 
 @router.get("/{workflow_id}", response_model=WorkflowResponse)
+@limiter.limit(READ_LIMIT)
 async def get_workflow(
+    request: Request,
     workflow_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
 ):
     """Get a workflow by ID"""
     result = await db.execute(
@@ -86,10 +99,13 @@ async def get_workflow(
 
 
 @router.put("/{workflow_id}", response_model=WorkflowResponse)
+@limiter.limit(API_LIMIT)
 async def update_workflow(
+    request: Request,
     workflow_id: int,
     workflow_update: WorkflowUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
 ):
     """Update a workflow"""
     result = await db.execute(
@@ -115,9 +131,12 @@ async def update_workflow(
 
 
 @router.delete("/{workflow_id}")
+@limiter.limit(API_LIMIT)
 async def delete_workflow(
+    request: Request,
     workflow_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
 ):
     """Delete a workflow"""
     result = await db.execute(
@@ -140,9 +159,12 @@ async def delete_workflow(
 
 
 @router.post("/{workflow_id}/activate")
+@limiter.limit(API_LIMIT)
 async def activate_workflow(
+    request: Request,
     workflow_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
 ):
     """Activate a workflow"""
     from app.services.executor import activate_workflow as activate
@@ -151,9 +173,12 @@ async def activate_workflow(
 
 
 @router.post("/{workflow_id}/deactivate")
+@limiter.limit(API_LIMIT)
 async def deactivate_workflow(
+    request: Request,
     workflow_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
 ):
     """Deactivate a workflow"""
     from app.services.executor import deactivate_workflow as deactivate
@@ -162,10 +187,13 @@ async def deactivate_workflow(
 
 
 @router.get("/{workflow_id}/executions", response_model=List[WorkflowExecutionResponse])
+@limiter.limit(READ_LIMIT)
 async def get_workflow_executions(
+    request: Request,
     workflow_id: int,
     limit: int = 20,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
 ):
     """Get execution history for a workflow"""
     result = await db.execute(
@@ -179,9 +207,12 @@ async def get_workflow_executions(
 
 
 @router.post("/{workflow_id}/execute")
+@limiter.limit(EXECUTE_LIMIT)
 async def execute_workflow_now(
+    request: Request,
     workflow_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(get_current_admin)
 ):
     """Execute a workflow immediately"""
     from app.services.executor import execute_workflow

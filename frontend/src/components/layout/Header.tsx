@@ -1,16 +1,38 @@
-import { Link, useLocation } from 'react-router-dom'
-import { Settings, LayoutDashboard, Workflow } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Settings, LayoutDashboard, Workflow, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useAuthStore } from '@/stores/authStore'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useToast } from '@/hooks/use-toast'
 
 export function Header() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { toast } = useToast()
   const { is_configured } = useSettingsStore()
+  const logout = useAuthStore((state) => state.logout)
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/settings', label: 'Settings', icon: Settings },
   ]
+
+  const handleLogout = () => {
+    logout()
+    toast({
+      title: 'Logged out',
+      description: 'You have been logged out successfully.',
+    })
+    navigate('/login')
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-xl">
@@ -58,6 +80,33 @@ export function Header() {
               {is_configured ? 'Connected' : 'Not configured'}
             </span>
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                  A
+                </div>
+                <span className="hidden sm:inline">Admin</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-sell focus:text-sell"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

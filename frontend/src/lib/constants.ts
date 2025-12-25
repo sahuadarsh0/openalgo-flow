@@ -573,6 +573,7 @@ export const DEFAULT_SETTINGS = {
 } as const
 
 export const API_ENDPOINTS = {
+  AUTH: '/api/auth',
   SETTINGS: '/api/settings',
   SETTINGS_TEST: '/api/settings/test',
   WORKFLOWS: '/api/workflows',

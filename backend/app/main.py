@@ -1,14 +1,18 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 import logging
 
 from app.core.config import settings
 from app.core.database import create_tables
 from app.core.scheduler import workflow_scheduler
+from app.core.rate_limit import limiter
 from app.api.routes import settings as settings_router
 from app.api.routes import workflows as workflows_router
 from app.api.routes import symbols as symbols_router
+from app.api.routes import auth as auth_router
 from app.api import websocket as websocket_router
 
 # Configure logging
@@ -39,6 +43,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Add rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -49,6 +57,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth_router.router, prefix=settings.api_prefix)
 app.include_router(settings_router.router, prefix=settings.api_prefix)
 app.include_router(workflows_router.router, prefix=settings.api_prefix)
 app.include_router(symbols_router.router, prefix=settings.api_prefix)

@@ -1,26 +1,113 @@
 import { API_ENDPOINTS } from './constants';
+import { getAuthToken, useAuthStore } from '@/stores/authStore';
 
 const API_BASE = '';
 
+/**
+ * Custom error class for API errors
+ */
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+    this.name = 'ApiError';
+  }
+}
+
+/**
+ * Make authenticated API requests
+ */
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  requiresAuth: boolean = true
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  // Add auth header if required and token exists
+  if (requiresAuth) {
+    const token = getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
     ...options,
+    headers,
   });
+
+  // Handle 401 Unauthorized - logout and redirect to login
+  if (response.status === 401) {
+    useAuthStore.getState().logout();
+    window.location.href = '/login';
+    throw new ApiError('Session expired. Please login again.', 401);
+  }
+
+  // Handle rate limiting
+  if (response.status === 429) {
+    const error = await response.json().catch(() => ({ detail: 'Rate limit exceeded' }));
+    throw new ApiError(error.detail || 'Too many requests. Please try again later.', 429);
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.detail || error.message || 'Request failed');
+    throw new ApiError(error.detail || error.message || 'Request failed', response.status);
   }
 
   return response.json();
 }
+
+// Auth API (no auth required for these)
+export const authApi = {
+  getStatus: () => request<{
+    is_setup_complete: boolean;
+    is_authenticated: boolean;
+  }>(`${API_ENDPOINTS.AUTH}/status`, {}, false),
+
+  setup: (password: string) => request<{
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+  }>(`${API_ENDPOINTS.AUTH}/setup`, {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  }, false),
+
+  login: (password: string) => request<{
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+  }>(`${API_ENDPOINTS.AUTH}/login`, {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  }, false),
+
+  logout: () => request<{ status: string; message: string }>(
+    `${API_ENDPOINTS.AUTH}/logout`,
+    { method: 'POST' }
+  ),
+
+  verify: () => request<{ status: string; message: string }>(
+    `${API_ENDPOINTS.AUTH}/verify`
+  ),
+
+  changePassword: (currentPassword: string, newPassword: string) => request<{
+    status: string;
+    message: string;
+  }>(`${API_ENDPOINTS.AUTH}/change-password`, {
+    method: 'POST',
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  }),
+};
 
 // Settings API
 export const settingsApi = {
