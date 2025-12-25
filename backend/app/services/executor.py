@@ -127,20 +127,67 @@ class NodeExecutor:
             self.context.set_variable(output_var.strip(), result)
             self.log(f"Stored result in variable: {output_var}")
 
+    def interpolate_value(self, value: Any) -> Any:
+        """Interpolate variables in a value (string, number, or keep as-is)"""
+        if isinstance(value, str):
+            interpolated = self.context.interpolate(value)
+            # Try to convert to number if it looks like one
+            if interpolated.isdigit():
+                return int(interpolated)
+            try:
+                return float(interpolated)
+            except ValueError:
+                return interpolated
+        return value
+
+    def get_str(self, node_data: dict, key: str, default: str = "") -> str:
+        """Get interpolated string value from node data"""
+        value = node_data.get(key, default)
+        return self.context.interpolate(str(value)) if value else default
+
+    def get_int(self, node_data: dict, key: str, default: int = 0) -> int:
+        """Get interpolated integer value from node data"""
+        value = node_data.get(key, default)
+        if isinstance(value, str):
+            interpolated = self.context.interpolate(value)
+            try:
+                return int(float(interpolated))
+            except (ValueError, TypeError):
+                return default
+        return int(value) if value else default
+
+    def get_float(self, node_data: dict, key: str, default: float = 0.0) -> float:
+        """Get interpolated float value from node data"""
+        value = node_data.get(key, default)
+        if isinstance(value, str):
+            interpolated = self.context.interpolate(value)
+            try:
+                return float(interpolated)
+            except (ValueError, TypeError):
+                return default
+        return float(value) if value else default
+
     def execute_place_order(self, node_data: dict) -> dict:
-        """Execute Place Order node"""
-        self.log(
-            f"Placing order: {node_data.get('symbol')} {node_data.get('action')} qty={node_data.get('quantity')}"
-        )
+        """Execute Place Order node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "")
+        exchange = self.get_str(node_data, "exchange", "NSE")
+        action = self.get_str(node_data, "action", "BUY")
+        quantity = self.get_int(node_data, "quantity", 1)
+        price_type = self.get_str(node_data, "priceType", "MARKET")
+        product = self.get_str(node_data, "product", "MIS")
+        price = self.get_float(node_data, "price", 0)
+        trigger_price = self.get_float(node_data, "triggerPrice", 0)
+
+        self.log(f"Placing order: {symbol} {action} qty={quantity}")
         result = self.client.place_order(
-            symbol=node_data.get("symbol", ""),
-            exchange=node_data.get("exchange", "NSE"),
-            action=node_data.get("action", "BUY"),
-            quantity=int(node_data.get("quantity", 1)),
-            price_type=node_data.get("priceType", "MARKET"),
-            product=node_data.get("product", "MIS"),
-            price=float(node_data.get("price", 0)),
-            trigger_price=float(node_data.get("triggerPrice", 0)),
+            symbol=symbol,
+            exchange=exchange,
+            action=action,
+            quantity=quantity,
+            price_type=price_type,
+            product=product,
+            price=price,
+            trigger_price=trigger_price,
         )
         self.log(
             f"Order result: {result}",
@@ -150,20 +197,28 @@ class NodeExecutor:
         return result
 
     def execute_smart_order(self, node_data: dict) -> dict:
-        """Execute Smart Order node"""
-        self.log(
-            f"Placing smart order: {node_data.get('symbol')} {node_data.get('action')}"
-        )
+        """Execute Smart Order node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "")
+        exchange = self.get_str(node_data, "exchange", "NSE")
+        action = self.get_str(node_data, "action", "BUY")
+        quantity = self.get_int(node_data, "quantity", 1)
+        position_size = self.get_int(node_data, "positionSize", 0)
+        price_type = self.get_str(node_data, "priceType", "MARKET")
+        product = self.get_str(node_data, "product", "MIS")
+        price = self.get_float(node_data, "price", 0)
+        trigger_price = self.get_float(node_data, "triggerPrice", 0)
+
+        self.log(f"Placing smart order: {symbol} {action}")
         result = self.client.place_smart_order(
-            symbol=node_data.get("symbol", ""),
-            exchange=node_data.get("exchange", "NSE"),
-            action=node_data.get("action", "BUY"),
-            quantity=int(node_data.get("quantity", 1)),
-            position_size=int(node_data.get("positionSize", 0)),
-            price_type=node_data.get("priceType", "MARKET"),
-            product=node_data.get("product", "MIS"),
-            price=float(node_data.get("price", 0)),
-            trigger_price=float(node_data.get("triggerPrice", 0)),
+            symbol=symbol,
+            exchange=exchange,
+            action=action,
+            quantity=quantity,
+            position_size=position_size,
+            price_type=price_type,
+            product=product,
+            price=price,
+            trigger_price=trigger_price,
         )
         self.log(
             f"Smart order result: {result}",
@@ -173,14 +228,18 @@ class NodeExecutor:
         return result
 
     def execute_options_order(self, node_data: dict) -> dict:
-        """Execute Options Order node"""
-        underlying = node_data.get("underlying", "NIFTY")
-        expiry_type = node_data.get("expiryType", "current_week")
-        quantity = int(node_data.get("quantity", 1))
+        """Execute Options Order node - supports {{variable}} interpolation"""
+        underlying = self.get_str(node_data, "underlying", "NIFTY")
+        expiry_type = self.get_str(node_data, "expiryType", "current_week")
+        quantity = self.get_int(node_data, "quantity", 1)
+        offset = self.get_str(node_data, "offset", "ATM")
+        option_type = self.get_str(node_data, "optionType", "CE")
+        action = self.get_str(node_data, "action", "BUY")
+        price_type = self.get_str(node_data, "priceType", "MARKET")
+        product = self.get_str(node_data, "product", "NRML")
+        split_size = self.get_int(node_data, "splitSize", 0)
 
-        self.log(
-            f"Placing options order: {underlying} {node_data.get('optionType')} {node_data.get('offset')}"
-        )
+        self.log(f"Placing options order: {underlying} {option_type} {offset}")
 
         # Get the underlying exchange for index
         if underlying in ["SENSEX", "BANKEX", "SENSEX50"]:
@@ -210,13 +269,13 @@ class NodeExecutor:
             underlying=underlying,
             exchange=underlying_exchange,
             expiry_date=expiry_date,
-            offset=node_data.get("offset", "ATM"),
-            option_type=node_data.get("optionType", "CE"),
-            action=node_data.get("action", "BUY"),
+            offset=offset,
+            option_type=option_type,
+            action=action,
             quantity=total_quantity,
-            price_type=node_data.get("priceType", "MARKET"),
-            product=node_data.get("product", "NRML"),
-            splitsize=int(node_data.get("splitSize", 0)),
+            price_type=price_type,
+            product=product,
+            splitsize=split_size,
         )
         self.log(
             f"Options order result: {result}",
@@ -226,17 +285,17 @@ class NodeExecutor:
         return result
 
     def execute_options_multi_order(self, node_data: dict) -> dict:
-        """Execute Multi-Leg Options Order node
+        """Execute Multi-Leg Options Order node - supports {{variable}} interpolation
 
         Note: product and pricetype are specified per-leg in the legs array.
         """
-        underlying = node_data.get("underlying", "NIFTY")
-        strategy = node_data.get("strategy", "straddle")
-        action = node_data.get("action", "SELL")
-        quantity = int(node_data.get("quantity", 1))
-        expiry_type = node_data.get("expiryType", "current_week")
-        product = node_data.get("product", "NRML")
-        price_type = node_data.get("priceType", "MARKET")
+        underlying = self.get_str(node_data, "underlying", "NIFTY")
+        strategy = self.get_str(node_data, "strategy", "straddle")
+        action = self.get_str(node_data, "action", "SELL")
+        quantity = self.get_int(node_data, "quantity", 1)
+        expiry_type = self.get_str(node_data, "expiryType", "current_week")
+        product = self.get_str(node_data, "product", "NRML")
+        price_type = self.get_str(node_data, "priceType", "MARKET")
 
         self.log(
             f"Placing multi-leg options order: {underlying} strategy={strategy} action={action} product={product}"
@@ -476,18 +535,24 @@ class NodeExecutor:
         return result
 
     def execute_split_order(self, node_data: dict) -> dict:
-        """Execute Split Order node"""
-        self.log(
-            f"Placing split order: {node_data.get('symbol')} qty={node_data.get('quantity')} split={node_data.get('splitSize')}"
-        )
+        """Execute Split Order node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "")
+        exchange = self.get_str(node_data, "exchange", "NSE")
+        action = self.get_str(node_data, "action", "BUY")
+        quantity = self.get_int(node_data, "quantity", 1)
+        split_size = self.get_int(node_data, "splitSize", 10)
+        price_type = self.get_str(node_data, "priceType", "MARKET")
+        product = self.get_str(node_data, "product", "MIS")
+
+        self.log(f"Placing split order: {symbol} qty={quantity} split={split_size}")
         result = self.client.split_order(
-            symbol=node_data.get("symbol", ""),
-            exchange=node_data.get("exchange", "NSE"),
-            action=node_data.get("action", "BUY"),
-            quantity=int(node_data.get("quantity", 1)),
-            splitsize=int(node_data.get("splitSize", 10)),
-            price_type=node_data.get("priceType", "MARKET"),
-            product=node_data.get("product", "MIS"),
+            symbol=symbol,
+            exchange=exchange,
+            action=action,
+            quantity=quantity,
+            splitsize=split_size,
+            price_type=price_type,
+            product=product,
         )
         self.log(
             f"Split order result: {result}",
@@ -549,9 +614,9 @@ class NodeExecutor:
         return result
 
     def execute_get_quote(self, node_data: dict) -> dict:
-        """Execute Get Quote node"""
-        symbol = node_data.get("symbol", "")
-        exchange = node_data.get("exchange", "NSE")
+        """Execute Get Quote node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "")
+        exchange = self.get_str(node_data, "exchange", "NSE")
         self.log(f"Getting quote for: {symbol} ({exchange})")
         result = self.client.get_quotes(symbol=symbol, exchange=exchange)
         self.log(f"Quote result: {result}")
@@ -568,9 +633,9 @@ class NodeExecutor:
         return result
 
     def execute_get_depth(self, node_data: dict) -> dict:
-        """Execute Get Depth node"""
-        symbol = node_data.get("symbol", "")
-        exchange = node_data.get("exchange", "NSE")
+        """Execute Get Depth node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "")
+        exchange = self.get_str(node_data, "exchange", "NSE")
         self.log(f"Getting depth for: {symbol} ({exchange})")
         result = self.client.get_depth(symbol=symbol, exchange=exchange)
         self.log(f"Depth result received")
@@ -587,10 +652,10 @@ class NodeExecutor:
         return result
 
     def execute_open_position(self, node_data: dict) -> dict:
-        """Execute Open Position node"""
-        symbol = node_data.get("symbol", "")
-        exchange = node_data.get("exchange", "NSE")
-        product = node_data.get("product", "MIS")
+        """Execute Open Position node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "")
+        exchange = self.get_str(node_data, "exchange", "NSE")
+        product = self.get_str(node_data, "product", "MIS")
         self.log(f"Getting open position for: {symbol}")
         result = self.client.get_open_position(
             symbol=symbol, exchange=exchange, product=product
@@ -600,12 +665,12 @@ class NodeExecutor:
         return result
 
     def execute_history(self, node_data: dict) -> dict:
-        """Execute History node"""
-        symbol = node_data.get("symbol", "")
-        exchange = node_data.get("exchange", "NSE")
-        interval = node_data.get("interval", "5m")
-        start_date = node_data.get("startDate", "")
-        end_date = node_data.get("endDate", "")
+        """Execute History node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "")
+        exchange = self.get_str(node_data, "exchange", "NSE")
+        interval = self.get_str(node_data, "interval", "5m")
+        start_date = self.get_str(node_data, "startDate", "")
+        end_date = self.get_str(node_data, "endDate", "")
         self.log(f"Getting history for: {symbol} ({interval})")
         result = self.client.get_history(
             symbol=symbol,
@@ -619,10 +684,10 @@ class NodeExecutor:
         return {"status": "success", "data": result}
 
     def execute_expiry(self, node_data: dict) -> dict:
-        """Execute Expiry node"""
-        symbol = node_data.get("symbol", "NIFTY")
-        exchange = node_data.get("exchange", "NFO")
-        instrument_type = node_data.get("instrumentType", "options")
+        """Execute Expiry node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "NIFTY")
+        exchange = self.get_str(node_data, "exchange", "NFO")
+        instrument_type = self.get_str(node_data, "instrumentType", "options")
         self.log(f"Getting expiry dates for: {symbol}")
         result = self.client.get_expiry(
             symbol=symbol, exchange=exchange, instrumenttype=instrument_type
@@ -724,7 +789,8 @@ class NodeExecutor:
 
     def execute_variable(self, node_data: dict) -> dict:
         """Execute Variable node"""
-        var_name = node_data.get("name", "")
+        # Frontend uses 'variableName', fallback to 'name' for compatibility
+        var_name = node_data.get("variableName") or node_data.get("name", "")
         var_value = node_data.get("value", "")
 
         # Interpolate the value first
@@ -742,12 +808,12 @@ class NodeExecutor:
         return {"status": "success", "variable": var_name, "value": var_value}
 
     def execute_position_check(self, node_data: dict) -> dict:
-        """Execute Position Check node - returns True/False for condition"""
-        symbol = node_data.get("symbol", "")
-        exchange = node_data.get("exchange", "NSE")
-        product = node_data.get("product", "MIS")
-        operator = node_data.get("operator", "gt")
-        threshold = int(node_data.get("threshold", 0))
+        """Execute Position Check node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "")
+        exchange = self.get_str(node_data, "exchange", "NSE")
+        product = self.get_str(node_data, "product", "MIS")
+        operator = self.get_str(node_data, "operator", "gt")
+        threshold = self.get_int(node_data, "threshold", 0)
 
         self.log(f"Checking position for: {symbol}")
         result = self.client.get_open_position(
@@ -763,9 +829,9 @@ class NodeExecutor:
         return {"status": "success", "condition": condition_met, "quantity": quantity}
 
     def execute_fund_check(self, node_data: dict) -> dict:
-        """Execute Fund Check node - returns True/False for condition"""
-        operator = node_data.get("operator", "gt")
-        threshold = float(node_data.get("threshold", 0))
+        """Execute Fund Check node - supports {{variable}} interpolation"""
+        operator = self.get_str(node_data, "operator", "gt")
+        threshold = self.get_float(node_data, "threshold", 0)
 
         self.log("Checking funds")
         result = self.client.get_funds()
@@ -783,11 +849,11 @@ class NodeExecutor:
         }
 
     def execute_price_condition(self, node_data: dict) -> dict:
-        """Execute Price Condition node - returns True/False for condition"""
-        symbol = node_data.get("symbol", "")
-        exchange = node_data.get("exchange", "NSE")
-        operator = node_data.get("operator", "gt")
-        threshold = float(node_data.get("threshold", 0))
+        """Execute Price Condition node - supports {{variable}} interpolation"""
+        symbol = self.get_str(node_data, "symbol", "")
+        exchange = self.get_str(node_data, "exchange", "NSE")
+        operator = self.get_str(node_data, "operator", "gt")
+        threshold = self.get_float(node_data, "threshold", 0)
 
         self.log(f"Checking price condition for: {symbol}")
         result = self.client.get_quotes(symbol=symbol, exchange=exchange)

@@ -251,7 +251,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., RELIANCE"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
 
@@ -488,7 +488,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., RELIANCE"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
 
@@ -1133,7 +1133,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., RELIANCE"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -1237,7 +1237,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., RELIANCE,INFY,TCS"
                   value={(nodeData.symbols as string) || ''}
-                  onChange={(e) => handleDataChange('symbols', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbols', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -1380,7 +1380,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., RELIANCE"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -1423,7 +1423,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., SBIN"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -1466,7 +1466,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., RELIANCE"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -1527,7 +1527,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., SBIN"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -1599,7 +1599,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., NIFTY"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -1894,7 +1894,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., RELIANCE"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -2007,7 +2007,7 @@ export function ConfigPanel() {
                 <Input
                   placeholder="e.g., RELIANCE"
                   value={(nodeData.symbol as string) || ''}
-                  onChange={(e) => handleDataChange('symbol', e.target.value.toUpperCase())}
+                  onChange={(e) => handleDataChange('symbol', e.target.value)}
                 />
               </div>
               <div className="space-y-2">

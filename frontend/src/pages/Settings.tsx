@@ -105,13 +105,14 @@ export function Settings() {
   }
 
   return (
-    <div className="container max-w-2xl py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">
-          Configure your OpenAlgo connection settings
-        </p>
-      </div>
+    <div className="min-h-[calc(100vh-3.5rem)] bg-background">
+      <div className="mx-auto max-w-2xl px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-muted-foreground">
+            Configure your OpenAlgo connection settings
+          </p>
+        </div>
 
       <div className="space-y-6">
         <Card>
@@ -279,6 +280,7 @@ export function Settings() {
             Save Settings
           </Button>
         </div>
+      </div>
       </div>
     </div>
   )
