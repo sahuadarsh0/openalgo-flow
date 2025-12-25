@@ -775,6 +775,49 @@ Helper operations.
 
 ---
 
+### Math Expression
+
+**Purpose**: Evaluate mathematical expressions with variables.
+
+**Configuration**:
+| Field | Description |
+|-------|-------------|
+| Expression | Mathematical formula with `{{variables}}` |
+| Output Variable | Variable to store result (default: `result`) |
+
+**Supported Operators**:
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `+` | Addition | `{{a}} + {{b}}` |
+| `-` | Subtraction | `{{price}} - 10` |
+| `*` | Multiplication | `{{qty}} * {{ltp}}` |
+| `/` | Division | `{{total}} / {{count}}` |
+| `%` | Modulo | `{{value}} % 100` |
+| `**` | Power | `{{base}} ** 2` |
+| `()` | Grouping | `({{a}} + {{b}}) * {{c}}` |
+
+**Example Expressions**:
+```
+{{ltp}} * {{qty}}                    - Position value
+{{price}} * 1.02                     - 2% buffer
+({{high}} + {{low}}) / 2             - Average price
+{{entry}} + ({{entry}} * 0.01)       - 1% target
+({{exit}} - {{entry}}) * {{qty}}     - P&L calculation
+{{capital}} * 0.02 / {{stoploss}}    - Position sizing
+```
+
+**Workflow Example**:
+```
+1. Subscribe LTP: RELIANCE → {{ltp}} = 2450
+2. Variable: Set qty = 100
+3. Math: {{ltp}} * {{qty}} → {{result}} = 245000
+4. Telegram: "Position value: {{result}}"
+```
+
+**Note**: Uses safe evaluation (no code injection). Only numeric operations allowed.
+
+---
+
 ### Log
 
 **Purpose**: Log a message for debugging.

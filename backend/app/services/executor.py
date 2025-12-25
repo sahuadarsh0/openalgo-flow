@@ -1680,11 +1680,13 @@ class NodeExecutor:
         }
 
         def _eval(node):
-            if isinstance(node, ast.Constant):  # Python 3.8+
+            # Handle numeric constants (Python 3.8+)
+            if isinstance(node, ast.Constant):
                 if isinstance(node.value, (int, float)):
                     return node.value
                 raise ValueError(f"Unsupported constant: {node.value}")
-            elif isinstance(node, ast.Num):  # Python 3.7 compatibility
+            # Handle ast.Num for Python 3.7 compatibility (if available)
+            elif hasattr(ast, 'Num') and isinstance(node, ast.Num):
                 return node.n
             elif isinstance(node, ast.BinOp):
                 left = _eval(node.left)

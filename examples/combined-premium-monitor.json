@@ -1,0 +1,154 @@
+{
+  "version": "1.0",
+  "name": "Combined Premium Monitor",
+  "description": "Every 1 minute: Get ATM CE & PE symbols, fetch quotes, calculate combined premium, send to Telegram",
+  "nodes": [
+    {
+      "id": "start-1",
+      "type": "start",
+      "position": { "x": 250, "y": 50 },
+      "data": {
+        "label": "Every 1 Minute",
+        "scheduleType": "interval",
+        "intervalValue": 1,
+        "intervalUnit": "minutes",
+        "time": "09:15"
+      }
+    },
+    {
+      "id": "option-ce-1",
+      "type": "optionSymbol",
+      "position": { "x": 100, "y": 180 },
+      "data": {
+        "label": "Get ATM CE Symbol",
+        "underlying": "NIFTY",
+        "exchange": "NSE_INDEX",
+        "expiryType": "current_week",
+        "offset": "ATM",
+        "optionType": "CE",
+        "outputVariable": "ceSymbol"
+      }
+    },
+    {
+      "id": "option-pe-1",
+      "type": "optionSymbol",
+      "position": { "x": 400, "y": 180 },
+      "data": {
+        "label": "Get ATM PE Symbol",
+        "underlying": "NIFTY",
+        "exchange": "NSE_INDEX",
+        "expiryType": "current_week",
+        "offset": "ATM",
+        "optionType": "PE",
+        "outputVariable": "peSymbol"
+      }
+    },
+    {
+      "id": "quote-ce-1",
+      "type": "getQuote",
+      "position": { "x": 100, "y": 310 },
+      "data": {
+        "label": "Get CE Quote",
+        "symbol": "{{ceSymbol.symbol}}",
+        "exchange": "NFO",
+        "outputVariable": "ceQuote"
+      }
+    },
+    {
+      "id": "quote-pe-1",
+      "type": "getQuote",
+      "position": { "x": 400, "y": 310 },
+      "data": {
+        "label": "Get PE Quote",
+        "symbol": "{{peSymbol.symbol}}",
+        "exchange": "NFO",
+        "outputVariable": "peQuote"
+      }
+    },
+    {
+      "id": "var-ce-ltp",
+      "type": "variable",
+      "position": { "x": 100, "y": 440 },
+      "data": {
+        "label": "Store CE LTP",
+        "variableName": "ceLtp",
+        "operation": "set",
+        "value": "{{ceQuote.data.ltp}}"
+      }
+    },
+    {
+      "id": "var-pe-ltp",
+      "type": "variable",
+      "position": { "x": 400, "y": 440 },
+      "data": {
+        "label": "Store PE LTP",
+        "variableName": "peLtp",
+        "operation": "set",
+        "value": "{{peQuote.data.ltp}}"
+      }
+    },
+    {
+      "id": "math-1",
+      "type": "mathExpression",
+      "position": { "x": 250, "y": 570 },
+      "data": {
+        "label": "Calculate Combined Premium",
+        "expression": "{{ceLtp}} + {{peLtp}}",
+        "outputVariable": "combinedPremium"
+      }
+    },
+    {
+      "id": "telegram-1",
+      "type": "telegramAlert",
+      "position": { "x": 250, "y": 700 },
+      "data": {
+        "label": "Send to Telegram",
+        "username": "your_openalgo_username",
+        "message": "NIFTY ATM Straddle Premium\n\nCE: {{ceSymbol.symbol}} @ {{ceLtp}}\nPE: {{peSymbol.symbol}} @ {{peLtp}}\n\nCombined Premium: {{combinedPremium}}\nTime: {{time}}"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "start-1",
+      "target": "option-ce-1"
+    },
+    {
+      "id": "e2",
+      "source": "option-ce-1",
+      "target": "option-pe-1"
+    },
+    {
+      "id": "e3",
+      "source": "option-pe-1",
+      "target": "quote-ce-1"
+    },
+    {
+      "id": "e4",
+      "source": "quote-ce-1",
+      "target": "quote-pe-1"
+    },
+    {
+      "id": "e5",
+      "source": "quote-pe-1",
+      "target": "var-ce-ltp"
+    },
+    {
+      "id": "e6",
+      "source": "var-ce-ltp",
+      "target": "var-pe-ltp"
+    },
+    {
+      "id": "e7",
+      "source": "var-pe-ltp",
+      "target": "math-1"
+    },
+    {
+      "id": "e8",
+      "source": "math-1",
+      "target": "telegram-1"
+    }
+  ],
+  "exported_at": "2025-12-25T12:00:00Z"
+}
