@@ -259,7 +259,7 @@ function WorkflowCard({ workflow }: { workflow: WorkflowListItem }) {
 
       {/* Webhook Settings Dialog */}
       <Dialog open={isWebhookOpen} onOpenChange={setIsWebhookOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Webhook className="h-5 w-5" />
@@ -275,7 +275,7 @@ function WorkflowCard({ workflow }: { workflow: WorkflowListItem }) {
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : webhookQuery.data ? (
-            <div className="space-y-6 py-4">
+            <div className="space-y-6 py-4 overflow-y-auto flex-1">
               {/* Enable/Disable Toggle */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
